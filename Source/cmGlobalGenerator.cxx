@@ -1812,10 +1812,10 @@ int cmGlobalGenerator::Build(const std::string& /*unused*/,
       tries = 3;
 
       // display a message the first time, so we remember we're using patched cmake
-      if (suppressPatchMessage) {
+      if (!suppressPatchMessage) {
         suppressPatchMessage = true;
-        cmSystemTools::Message("xcodebuild hang patch, setting timeout and retries, future messages will be suppressed "
-                          "https://gist.github.com/JoshEngebretson/c3f5fa3bdd100cad7a6a2523bbb86c04\n");
+        cmSystemTools::Message("\n\nIMPORTANT: xcodebuild hang patch, setting timeout and retries, future messages will be suppressed "
+                          "https://gist.github.com/JoshEngebretson/c3f5fa3bdd100cad7a6a2523bbb86c04\n\n");
       }
 
   }
@@ -1845,8 +1845,8 @@ int cmGlobalGenerator::Build(const std::string& /*unused*/,
         return 1;
       }
 
-      cmSystemTools::Message("xcodebuild hang detected, retrying "
-                        "https://gist.github.com/JoshEngebretson/c3f5fa3bdd100cad7a6a2523bbb86c04\n");
+      cmSystemTools::Message("\n\nxcodebuild hang detected, retrying "
+                        "https://gist.github.com/JoshEngebretson/c3f5fa3bdd100cad7a6a2523bbb86c04\n\n");
 
       // try to run command again
       continue;

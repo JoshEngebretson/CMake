@@ -1792,21 +1792,72 @@ int cmGlobalGenerator::Build(const std::string& /*unused*/,
   output += makeCommandStr;
   output += "\n";
 
-  if (!cmSystemTools::RunSingleCommand(makeCommand, outputPtr, outputPtr,
+  // Work around xcodebuild hang issue when building CMAKE_TRY_COMPILE projects
+
+  // Thread deadlock appears to be related to processDependencyGraphEvents
+  // between threads doing buildWillStartForBuilder and provisioningCommandInputsFromMacroExpansionScope
+  // https://gist.github.com/JoshEngebretson/c3f5fa3bdd100cad7a6a2523bbb86c04
+
+  // Other references: http://www.openradar.me/radar?id=5549442786656256
+  // https://github.com/SlatherOrg/slather/issues/197#issuecomment-215207670
+
+  int tries = 1;
+  static bool suppressPatchMessage = false;
+
+  if (makeCommandStr.find("CMAKE_TRY_COMPILE.xcodeproj") != std::string::npos)
+  {
+      // give xcodebuild up to 5 seconds, otherwise assume hung
+      timeout = 5.0;
+      // try up to 3x
+      tries = 3;
+
+      // display a message the first time, so we remember we're using patched cmake
+      if (suppressPatchMessage) {
+        suppressPatchMessage = true;
+        cmSystemTools::Message("xcodebuild hang patch, setting timeout and retries, future messages will be suppressed "
+                          "https://gist.github.com/JoshEngebretson/c3f5fa3bdd100cad7a6a2523bbb86c04\n");
+      }
+
+  }
+
+  while(true) {
+
+    if (!cmSystemTools::RunSingleCommand(makeCommand, outputPtr, outputPtr,
                                        &retVal, CM_NULLPTR, outputflag,
                                        timeout)) {
-    cmSystemTools::SetRunCommandHideConsole(hideconsole);
-    cmSystemTools::Error(
-      "Generator: execution of make failed. Make command was: ",
-      makeCommandStr.c_str());
-    output += *outputPtr;
-    output += "\nGenerator: execution of make failed. Make command was: " +
-      makeCommandStr + "\n";
 
-    // return to the original directory
-    cmSystemTools::ChangeDirectory(cwd);
-    return 1;
+      // failed, if we're building a CMAKE_TRY_COMPILE project, tries up to 3x
+      tries--;
+
+      if (!tries) {
+
+        cmSystemTools::SetRunCommandHideConsole(hideconsole);
+        cmSystemTools::Error(
+          "Generator: execution of make failed. Make command was: ",
+          makeCommandStr.c_str());
+
+        output += *outputPtr;
+        output += "\nGenerator: execution of make failed. Make command was: " +
+          makeCommandStr + "\n";
+
+        // return to the original directory
+        cmSystemTools::ChangeDirectory(cwd);
+        return 1;
+      }
+
+      cmSystemTools::Message("xcodebuild hang detected, retrying "
+                        "https://gist.github.com/JoshEngebretson/c3f5fa3bdd100cad7a6a2523bbb86c04\n");
+
+      // try to run command again
+      continue;
+
+    }
+
+    // success
+    break;
+
   }
+
   output += *outputPtr;
   cmSystemTools::SetRunCommandHideConsole(hideconsole);
 
@@ -1818,6 +1869,7 @@ int cmGlobalGenerator::Build(const std::string& /*unused*/,
   }
 
   cmSystemTools::ChangeDirectory(cwd);
+
   return retVal;
 }
 

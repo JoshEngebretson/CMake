@@ -332,6 +332,32 @@ void cmGlobalXCodeGenerator::GenerateBuildCommand(
   }
   makeCommand.insert(makeCommand.end(), makeOptions.begin(),
                      makeOptions.end());
+
+  /*
+
+  // These are some attempts at disabling code signing, to see
+  // if disabling this would solve deadlocks
+
+  // Work around xcodebuild hang issue when building CMAKE_TRY_COMPILE projects
+  if (projectName.find("CMAKE_TRY_COMPILE") != std::string::npos) {
+
+    cmSystemTools::Message("Applying CMAKE_TRY_COMPILE Xcode code signing patch, "
+                        "https://gist.github.com/JoshEngebretson/c3f5fa3bdd100cad7a6a2523bbb86c04\n");
+
+    makeCommand.push_back("CODE_SIGNING_REQUIRED=NO");
+    makeCommand.push_back("CODE_SIGNING_ALLOWED=NO");
+    makeCommand.push_back("CODE_SIGN_IDENTITY=\"\"");
+    makeCommand.push_back("CODESIGNING_FOLDER_PATH=\"\"");
+
+    // makeCommand.push_back("EMBEDDED_PROFILE_NAME=\"xxx\"");
+    // makeCommand.push_back("EXPANDED_PROVISIONING_PROFILE=\"xxx\"");
+
+    // shows settings, though parses as error
+    // makeCommand.push_back("-showBuildSettings");
+  }
+
+  */
+
 }
 
 ///! Create a local generator appropriate to this Global Generator
